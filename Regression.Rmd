@@ -1,0 +1,52 @@
+###a. Linear regression model: Predicting drink prices based on distance from the center
+
+As the name suggests, this model is used for regression problem. In this project, I use linear regression to predict drink prices based on the type of drink and how far the shop is from Thornes Marketplace - the location I choose to represent the center of Northampton. 
+
+I first start with a simple linear regression model: predicting price based on distance from Thornes. 
+
+To prepare the data, I calculate the distance from each shop to Thornes Marketplace (the center of Northampton) using the ggmap package. Also, some shops have special unique drinks that are not sold anywhere else, which can cause biases to the data. Thus I exclude drinks that are sold by less than three shops. 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+thornes_address <- data_for_map %>%
+  filter(`Coffee/tea shop`=="Share Northampton")
+str(thornes_address)
+
+distance=mapdist("150 Main Street, Northampton, MA 01063", data_for_map$Address, mode = "driving")
+
+data_for_map$distance_from_thornes = distance$miles
+```
+
+```{r, echo=FALSE}
+data_for_map <- data_for_map %>%
+  rename(Shop=`Coffee/tea shop`)
+
+unique_shop=data_for_map[-c(6,7,18),]
+drink_not_unique <- Coffee_prices %>%
+  group_by(Drink) %>%
+  summarize(number=n()) %>%
+  filter(number>3)
+
+Coffee_prices_1 <- Coffee_prices %>%
+  filter(Drink %in% drink_not_unique$Drink) %>%
+  inner_join(unique_shop, by="Shop")
+
+```
+
+Below is the plot of drinks’ distance from the center and their prices:
+```{r}
+xyplot(Price_12_Oz ~ distance_from_thornes, data= Coffee_prices_1)
+```
+
+
+As you can see, drinks that are further away from the center tend to have lower price. As the term Linear Regression suggests, the model tries to fit a line that best fits the data. It is this line: 
+(plot) 
+
+The distance from all the dots to the line is the error. The model automatically chooses a line where that distance (error) is the smallest. 
+
+I fit a linear regression on my actual data and get a summary of the model: 
+```{r}
+simple_reg <- lm(Price_12_Oz ~ distance_from_thornes, data=Coffee_prices_1)
+summary(simple_reg)
+```
+
+In the previous article (link), I mentioned that the p-value measures if the relationship between two things truly exist. In this case, the p-value is less than 0.05 (as indicated by the ***), so I conclude that location is negatively related to price. In economic research, you can only reach a conclusion if p-value is less than 0.05 (having at least one *). However, in machine learning, p-value is a lot less important than the predictive power of the model. 
